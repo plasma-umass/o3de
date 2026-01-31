@@ -564,17 +564,6 @@ namespace AzQtComponents
         return -1;
     }
 
-    bool TitleBar::usesCustomTopBorderResizing() const
-    {
-#ifdef Q_OS_WIN
-        // On Win < 10 we're not overlapping the titlebar, removing it works fine there.
-        // On Win < 10 we use native resizing of the top border.
-        return QOperatingSystemVersion::current() >= QOperatingSystemVersion(QOperatingSystemVersion::Windows, 10);
-#else
-        return true;
-#endif
-    }
-
     void TitleBar::checkEnableMouseTracking()
     {
         // We don't get a mouse release when detaching a dock widget, so much do it with a workaround
@@ -890,17 +879,11 @@ namespace AzQtComponents
             return false;
         }
 
-        return w && usesCustomTopBorderResizing() &&
-            w->minimumHeight() < w->maximumHeight() && !w->isMaximized();
+        return w && w->minimumHeight() < w->maximumHeight() && !w->isMaximized();
     }
 
     void TitleBar::updateMouseCursor(const QPoint& globalPos)
     {
-        if (!usesCustomTopBorderResizing())
-        {
-            return;
-        }
-
         bool usesResizeCursor = false;
         switch (cursor().shape()) {
         case Qt::SizeVerCursor:
@@ -996,12 +979,6 @@ namespace AzQtComponents
 
             handleMaximize();
             return;
-        }
-
-        // Workaround QTBUG-47543
-        if (QOperatingSystemVersion::current() >= QOperatingSystemVersion(QOperatingSystemVersion::Windows, 10))
-        {
-            update();
         }
 
         if (m_pendingRepositioning)
