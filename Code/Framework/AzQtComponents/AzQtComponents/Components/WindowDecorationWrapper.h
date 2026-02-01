@@ -129,6 +129,7 @@ namespace AzQtComponents
         void adjustSizeGripGeometry();
         void adjustWidgetGeometry();
         void updateConstraints();
+        void updateRoundedCorners();
         void enableSaveRestoreGeometry(QSettings* settings, const QString& key, bool autoRestoreOnShow);
 
         bool m_initialized = false;

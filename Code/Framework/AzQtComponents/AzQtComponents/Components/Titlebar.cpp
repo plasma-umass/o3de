@@ -199,20 +199,10 @@ namespace AzQtComponents
     void TitleBar::handleMaximize()
     {
         QWidget* w = window();
-        if (isMaximized())
-        {
-            w->showNormal();
-        }
+        if (w->windowState() & Qt::WindowMaximized)
+            w->setWindowState(Qt::WindowNoState);
         else
-        {
-            w->showMaximized();
-
-            // Need to separately resize based on the available geometry for
-            // the screen because since floating windows are frameless, on
-            // Windows 10 they end up taking up the entire screen when maximized
-            // instead of respecting the available space (e.g. taskbar)
-            w->setGeometry(QApplication::primaryScreen()->availableGeometry());
-        }
+            w->setWindowState(Qt::WindowMaximized);
     }
 
     void TitleBar::handleMinimize()

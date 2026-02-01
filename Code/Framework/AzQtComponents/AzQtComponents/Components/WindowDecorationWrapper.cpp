@@ -510,12 +510,8 @@ namespace AzQtComponents
     bool WindowDecorationWrapper::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
     {
 #ifdef Q_OS_WIN
-        static HMODULE dwmapiModule = LoadLibraryA("Dwmapi.dll");
-        using FuncSetWin = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
-        static FuncSetWin fn = (FuncSetWin)GetProcAddress(dwmapiModule, "DwmSetWindowAttribute");
-
         QWindow* window = windowHandle();
-        if (!m_windowAttributesInit && window && window->handle() && fn)
+        if (!m_windowAttributesInit && window && window->handle())
         {
             m_windowAttributesInit = true;
             auto hwnd = (HWND)window->winId();
@@ -526,9 +522,7 @@ namespace AzQtComponents
             SetWindowLong(hwnd, GWL_STYLE, style);
             SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 
-            // Set rounded corners
-            const DWM_WINDOW_CORNER_PREFERENCE pref = DWMWCP_ROUND;
-            fn(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &pref, sizeof(pref));
+            updateRoundedCorners();
         }
 #endif
 
@@ -541,6 +535,7 @@ namespace AzQtComponents
         {
             // only way to know when the window has minimized/maximized or full screen has changed
             saveGeometryToSettings();
+            updateRoundedCorners();
         }
 
         QFrame::changeEvent(ev);
@@ -580,6 +575,7 @@ namespace AzQtComponents
                 /**
                  * This code block increase the resize grab area around the frameless window
                  */
+                if (!(widget->window()->windowState() & Qt::WindowMaximized))
                 {
                     const LONG border = 12;
 
@@ -850,6 +846,25 @@ namespace AzQtComponents
         updateTitleBarButtons();
     }
 
+    void WindowDecorationWrapper::updateRoundedCorners()
+    {
+#ifdef Q_OS_WIN
+        static HMODULE dwmapiModule = LoadLibraryA("Dwmapi.dll");
+        using FuncSetWin = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+        static FuncSetWin fn = (FuncSetWin)GetProcAddress(dwmapiModule, "DwmSetWindowAttribute");
+
+        QWindow* window = windowHandle();
+        if (window && window->handle() && fn)
+        {
+            auto hwnd = (HWND)window->winId();
+
+            // Set rounded corners
+            const DWM_WINDOW_CORNER_PREFERENCE pref = (window->windowState() & Qt::WindowMaximized) ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
+            fn(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &pref, sizeof(pref));
+        }
+#endif
+    }
+
     void WindowDecorationWrapper::updateTitleBarButtons()
     {
         if (!autoTitleBarButtonsEnabled() || !isAttached() || m_titleBar == nullptr)
@@ -883,7 +898,7 @@ namespace AzQtComponents
         // For Win 10 we use frameless, as a titlebar margin would be added otherwise (see QTBUG-47543)
         // With frameless we have to support more custom code for resizing and default styling
 
-        return isWin10() ? Qt::FramelessWindowHint : Qt::CustomizeWindowHint;
+        return isWin10() ? (Qt::FramelessWindowHint | Qt::WindowMaximizeButtonHint) : Qt::CustomizeWindowHint;
     }
 
     void WindowDecorationWrapper::drawFrame(const QStyleOption *option, QPainter *painter, const QWidget *widget)
